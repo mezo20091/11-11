@@ -259,8 +259,6 @@
     filter:drop-shadow(0 0 22px rgba(255,93,143,.7));transform:scale(0);transition:transform .8s cubic-bezier(.3,1.8,.5,1)}
   #finale.play .fin-heart{transform:scale(1)}
   #finale.beat .fin-heart{animation:beat 1.3s ease-in-out infinite}
-  .fin-tap{color:var(--muted);font-size:.9rem;margin-top:6px;opacity:0;transition:opacity 1s}
-  #finale.beat .fin-tap{opacity:.8}
 
   /* phone interactions */
   #progress{position:fixed;top:0;right:0;height:3px;width:0;z-index:45;background:linear-gradient(270deg,var(--gold),var(--rose));
@@ -278,8 +276,6 @@
   .lb-count{color:var(--muted);font-size:.9rem;direction:ltr}
   .lb-x{position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);
     background:rgba(34,16,42,.85);color:var(--ink);font-size:20px;cursor:pointer}
-  .burst{position:fixed;z-index:70;pointer-events:none;font-size:22px;color:var(--rose);animation:burst 1.6s ease-out forwards}
-  @keyframes burst{to{transform:translate(var(--x),var(--y)) scale(.4) rotate(var(--r));opacity:0}}
 
   footer{position:relative;z-index:2;text-align:center;padding:40px 20px 60px;color:var(--muted)}
 
@@ -407,8 +403,7 @@
   <div class="clock num" id="clock">11<b>:</b>11</div>
   <p class="fin-intro" id="finIntro"></p>
   <h2 class="fin-msg" id="finMsg"></h2>
-  <button class="fin-heart" id="finHeart" aria-label="قلب">♥</button>
-  <div class="fin-tap">دوسي على القلب</div>
+  <div class="fin-heart" id="finHeart" aria-hidden="true">♥&#xFE0E;</div>
 </section>
 
 <footer id="foot"></footer>
@@ -499,25 +494,6 @@ function spawnHeart(){
 setInterval(spawnHeart, 700);
 for (let i=0;i<8;i++) setTimeout(spawnHeart, i*200);
 
-/* --- heart burst --- */
-// only the plain ♥ glyph (emoji like ✨ 💖 render as blobs on some phones/PCs), in pink, rose and gold
-const BURST_COLORS = ["#ff5d8f", "#ff9fbd", "#f5c97a", "#e0457b"];
-function burst(x, y, n=30, chars=["♥"], color=""){
-  for (let i=0;i<n;i++){
-    const b = document.createElement("span");
-    b.className = "burst";
-    b.textContent = chars[i%chars.length] + "︎";
-    b.style.color = color || BURST_COLORS[i % BURST_COLORS.length];
-    b.style.left = x+"px"; b.style.top = y+"px";
-    const a = Math.random()*Math.PI*2, d = 80 + Math.random()*220;
-    b.style.setProperty("--x", Math.cos(a)*d+"px");
-    b.style.setProperty("--y", Math.sin(a)*d+"px");
-    b.style.setProperty("--r", (Math.random()*360)+"deg");
-    b.style.fontSize = (14+Math.random()*20)+"px";
-    document.body.appendChild(b);
-    setTimeout(() => b.remove(), 1700);
-  }
-}
 
 /* --- music (mp3 file, or YouTube clip from start → end, looped) --- */
 const audio = $("#music"), mBtn = $("#musicBtn");
@@ -565,7 +541,6 @@ mBtn.onclick = () => playing ? pauseMusic() : playMusic();
 /* --- envelope gate --- */
 document.body.style.overflow = "hidden";
 const gate = $("#gate"), env = $("#env"), ncard = $("#ncard");
-const GOLD = ["♥"];
 
 // falling rose petals
 const petalTimer = setInterval(() => {
@@ -630,19 +605,11 @@ env.onclick = () => {
   try { navigator.vibrate && navigator.vibrate([25, 50, 25]); } catch(_){}
   gate.classList.add("opening");
   env.classList.add("open");
-  const r = env.querySelector(".seal").getBoundingClientRect();
-  burst(r.left + r.width/2, r.top + r.height/2, 26, GOLD, "#f5c97a");
-  setTimeout(() => {
-    gate.classList.add("shown");
-    const c = ncard.getBoundingClientRect();
-    for (let k=0;k<3;k++) setTimeout(() =>
-      burst(c.left + c.width*(.15 + Math.random()*.7), c.top + c.height*(.2 + Math.random()*.6), 22, GOLD, "#f5c97a"), 700 + k*260);
-  }, 2350);
+  setTimeout(() => gate.classList.add("shown"), 2350);
   setTimeout(() => gate.classList.add("live"), 3800);
 };
 
-$("#enterBtn").onclick = e => {
-  burst(e.clientX, e.clientY, 40);
+$("#enterBtn").onclick = () => {
   gate.classList.add("hide");
   document.body.style.overflow = "";
   playMusic();
@@ -707,7 +674,7 @@ gal.addEventListener("click", e => {
     clearTimeout(tapTimer); lastTap = 0;
     const h = document.createElement("span"); h.className = "like"; h.textContent = "♥";
     f.appendChild(h); setTimeout(() => h.remove(), 1000);
-    burst(e.clientX, e.clientY, 12); buzz([15, 40, 15]);
+    buzz([15, 40, 15]);
     return;
   }
   lastTap = now;
@@ -777,9 +744,7 @@ $("#finMsg").innerHTML = CONFIG.finale.map(line =>
 $("#finHeart").style.transitionDelay = (wi*.28 + .3) + "s";
 
 function heartShower(){
-  for (let k = 0; k < 4; k++) setTimeout(() =>
-    burst(innerWidth*(.15 + Math.random()*.7), innerHeight*(.25 + Math.random()*.45), 26), k*230);
-  for (let k = 0; k < 24; k++) setTimeout(spawnHeart, k*60);
+  for (let k = 0; k < 24; k++) setTimeout(spawnHeart, k*60);   // soft hearts floating up from the bottom
 }
 new IntersectionObserver((entries, obs) => entries.forEach(en => {
   if (!en.isIntersecting) return;
@@ -787,7 +752,6 @@ new IntersectionObserver((entries, obs) => entries.forEach(en => {
   setTimeout(() => { fin.classList.add("beat"); heartShower(); buzz([30, 60, 30, 60, 80]); }, (wi*.28 + 1.1) * 1000);
   obs.disconnect();
 }), {threshold:.45}).observe(fin);
-$("#finHeart").onclick = e => { burst(e.clientX, e.clientY, 36); heartShower(); buzz([20, 40, 20]); };
 
 /* --- counter counts up the first time it shows --- */
 let counted = false;
