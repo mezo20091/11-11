@@ -489,7 +489,7 @@ const heartsBox = $("#hearts");
 function spawnHeart(){
   const h = document.createElement("span");
   h.className = "fh";
-  h.textContent = Math.random() < .8 ? "♥" : "✦";
+  h.textContent = "♥︎";
   h.style.left = Math.random()*100 + "vw";
   h.style.fontSize = (10 + Math.random()*22) + "px";
   h.style.animationDuration = (8 + Math.random()*10) + "s";
@@ -500,12 +500,14 @@ setInterval(spawnHeart, 700);
 for (let i=0;i<8;i++) setTimeout(spawnHeart, i*200);
 
 /* --- heart burst --- */
-function burst(x, y, n=30, chars=["♥","❤","✨","💖"], color=""){
+// only the plain ♥ glyph (emoji like ✨ 💖 render as blobs on some phones/PCs), in pink, rose and gold
+const BURST_COLORS = ["#ff5d8f", "#ff9fbd", "#f5c97a", "#e0457b"];
+function burst(x, y, n=30, chars=["♥"], color=""){
   for (let i=0;i<n;i++){
     const b = document.createElement("span");
     b.className = "burst";
-    b.textContent = chars[i%chars.length];
-    if (color) b.style.color = color;
+    b.textContent = chars[i%chars.length] + "︎";
+    b.style.color = color || BURST_COLORS[i % BURST_COLORS.length];
     b.style.left = x+"px"; b.style.top = y+"px";
     const a = Math.random()*Math.PI*2, d = 80 + Math.random()*220;
     b.style.setProperty("--x", Math.cos(a)*d+"px");
@@ -563,7 +565,7 @@ mBtn.onclick = () => playing ? pauseMusic() : playMusic();
 /* --- envelope gate --- */
 document.body.style.overflow = "hidden";
 const gate = $("#gate"), env = $("#env"), ncard = $("#ncard");
-const GOLD = ["♥","✨","♥","♥"];
+const GOLD = ["♥"];
 
 // falling rose petals
 const petalTimer = setInterval(() => {
