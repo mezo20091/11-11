@@ -746,13 +746,6 @@ addEventListener("keydown", e => {
   if (e.key === "ArrowRight") showLb(lbIndex - 1, -1);
 });
 
-// tap anywhere on the page = a little heart pops where the finger touched
-addEventListener("pointerdown", e => {
-  if (!gate.classList.contains("hide") || lb.classList.contains("open")) return;
-  if (e.target.closest("button, a, .ph, .fin-heart")) return;
-  burst(e.clientX, e.clientY, 5, ["♥","♥","✨"]);
-});
-
 // scroll progress line at the top
 addEventListener("scroll", () => {
   const max = document.documentElement.scrollHeight - innerHeight;
