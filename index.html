@@ -280,8 +280,8 @@
   footer{position:relative;z-index:2;text-align:center;padding:40px 20px 60px;color:var(--muted)}
 
   /* music */
-  #musicBtn{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:20px;z-index:40;width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:rgba(34,16,42,.85);
-    color:var(--rose-soft);font-size:22px;cursor:pointer;display:none;backdrop-filter:blur(6px)}
+  #musicBtn{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:20px;z-index:70;width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:rgba(34,16,42,.85);
+    color:var(--rose-soft);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
   #musicBtn.playing{animation:spin 4s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -411,7 +411,7 @@
 <div id="lightbox"><button class="lb-x" aria-label="إغلاق">✕</button><img alt=""><div class="lb-count"></div></div>
 <div id="progress"></div>
 <button id="musicBtn" aria-label="موسيقى">♫</button>
-<audio id="music" loop preload="auto"></audio>
+<audio id="music" loop preload="auto" src="music.mp3"></audio>
 <div style="position:fixed;left:-400px;bottom:0;width:200px;height:200px;overflow:hidden;pointer-events:none" aria-hidden="true"><div id="yt"></div></div>
 
 <script>
@@ -427,7 +427,7 @@ const CONFIG = {
   // 🎵 الأغنية من يوتيوب: بتشتغل أول ما تدوس على القلب، من start لحد end (بالثواني) وتعيد
   youtube: { id: "QoVd8rOnzyw", start: 0, end: 85 },   // 85 ثانية = 1:25
   // لو حطيت ملف music.mp3 جنب الموقع واكتبت اسمه هنا، هيشتغل بدل يوتيوب
-  music: "",
+  music: "music.mp3",
 
   // 📖 الذكريات — زوّد أو امسح براحتك. photo اختياري (حط الصور في فولدر photos)
   memories: [
@@ -498,12 +498,41 @@ for (let i=0;i<8;i++) setTimeout(spawnHeart, i*200);
 /* --- music (mp3 file, or YouTube clip from start → end, looped) --- */
 const audio = $("#music"), mBtn = $("#musicBtn");
 const YTC = CONFIG.youtube;
-let player = null, ytReady = false, wantPlay = false, playing = false;
+let player = null, ytReady = false, wantPlay = true, playing = false;
 const setPlaying = p => { playing = p; mBtn.classList.toggle("playing", p); };
+
+function playMusic(){
+  wantPlay = true;
+  if (CONFIG.music){
+    audio.volume = 1.0;
+    const p = audio.play();
+    if (p !== undefined){
+      p.then(() => setPlaying(true))
+       .catch(err => {
+         console.log("Autoplay waiting for touch:", err);
+       });
+    }
+  } else if (ytReady && player){
+    player.playVideo();
+  }
+}
+
+function pauseMusic(){
+  wantPlay = false;
+  if (CONFIG.music){ audio.pause(); setPlaying(false); }
+  else if (ytReady && player) player.pauseVideo();
+}
+
+mBtn.onclick = (e) => {
+  e.stopPropagation();
+  playing ? pauseMusic() : playMusic();
+};
 
 if (CONFIG.music){
   audio.src = CONFIG.music;
-  audio.addEventListener("canplay", () => { mBtn.style.display = "block"; }, {once:true});
+  audio.addEventListener("canplay", () => {
+    if (!playing && wantPlay) playMusic();
+  }, {once:true});
 } else if (YTC && YTC.id){
   const s = document.createElement("script");
   s.src = "https://www.youtube.com/iframe_api";
@@ -513,7 +542,11 @@ if (CONFIG.music){
       width: 200, height: 200, videoId: YTC.id,
       playerVars: { start: YTC.start, end: YTC.end, controls: 0, playsinline: 1, rel: 0, modestbranding: 1 },
       events: {
-        onReady: () => { ytReady = true; mBtn.style.display = "block"; player.setVolume(100); if (wantPlay) player.playVideo(); },
+        onReady: () => { 
+          ytReady = true; 
+          player.setVolume(100); 
+          if (wantPlay) player.playVideo(); 
+        },
         onStateChange: e => {
           if (e.data === YT.PlayerState.PLAYING) setPlaying(true);
           else if (e.data === YT.PlayerState.PAUSED) setPlaying(false);
@@ -527,16 +560,21 @@ if (CONFIG.music){
     }, 300);
   };
 }
-function playMusic(){
-  wantPlay = true;
-  if (CONFIG.music) audio.play().then(() => setPlaying(true)).catch(() => {});
-  else if (ytReady) player.playVideo();
-}
-function pauseMusic(){
-  if (CONFIG.music){ audio.pause(); setPlaying(false); }
-  else if (ytReady) player.pauseVideo();
-}
-mBtn.onclick = () => playing ? pauseMusic() : playMusic();
+
+// Immediate play attempts on page open
+playMusic();
+window.addEventListener("DOMContentLoaded", playMusic);
+window.addEventListener("load", playMusic);
+
+// Unlock audio on very first user interaction anywhere
+const unlockAutoplay = () => {
+  if (!playing && wantPlay) {
+    playMusic();
+  }
+};
+['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'].forEach(evt => {
+  document.addEventListener(evt, unlockAutoplay, { passive: true });
+});
 
 /* --- envelope gate --- */
 document.body.style.overflow = "hidden";
